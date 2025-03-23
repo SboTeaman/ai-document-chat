@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+.mypy_cache/
+.ruff_cache/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+staticfiles/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Kubernetes secrets (never commit real values)
+k8s/secret.yaml
+
+# Virtual environments
+venv/
+.venv/
+env/
+# pip --user / --target installs inside the project (must never be committed)
+.local/
+backend/.local/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node / Frontend
+node_modules/
+frontend/dist/
+frontend/.nuxt/
+
+# Docker
+.docker/
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

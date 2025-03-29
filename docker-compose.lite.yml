@@ -1,0 +1,152 @@
+# Lightweight profile for low-resource machines.
+# Usage: docker compose -f docker-compose.lite.yml up -d
+#
+# Differences from the full stack:
+#  - No worker / beat / flower — tasks run synchronously inside the API process
+#    (CELERY_TASK_ALWAYS_EAGER=True), so document ingestion is blocking but works
+#    without a separate worker container.
+#  - Ollama runs CPU-only (no GPU reservation).
+#  - Uses llama3.2:1b (~650 MB) instead of llama3.2:3b (~2 GB).
+#  - All services have mem_limit to prevent OOM on machines with 8 GB or less.
+#  - Redis is capped at 48 MB with LRU eviction.
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-knowledgebase}
+      POSTGRES_USER: ${POSTGRES_USER:-kb_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kb_user -d knowledgebase"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --maxmemory 48mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    mem_limit: 64m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  createbuckets:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set in .env}
+    entrypoint: >
+      /bin/sh -c "
+        /usr/bin/mc alias set local http://minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" &&
+        /usr/bin/mc mb local/knowledge-base-files --ignore-existing &&
+        /usr/bin/mc anonymous set none local/knowledge-base-files &&
+        echo 'Bucket ready.'
+      "
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
+    env_file: .env
+    environment:
+      # Run Celery tasks synchronously — no worker container needed.
+      - CELERY_TASK_ALWAYS_EAGER=True
+      # Smaller model to match the lite ollama-init below.
+      - OLLAMA_CHAT_MODEL=llama3.2:1b
+      # Smaller batch size reduces peak memory during ingestion.
+      - EMBEDDING_BATCH_SIZE=32
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    mem_limit: 512m
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    mem_limit: 512m
+    environment:
+      - VITE_API_URL=http://localhost:8000
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # CPU-only — no GPU reservation.
+    mem_limit: 4g
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:11434/api/tags || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: >
+      /bin/sh -c "
+        ollama pull nomic-embed-text &&
+        ollama pull llama3.2:1b &&
+        echo 'Models ready.'
+      "
+
+volumes:
+  postgres_data:
+  minio_data:
+  ollama_data:

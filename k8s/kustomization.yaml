@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: knowledge-base
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.example.yaml   # replace with your real secret.yaml in a real cluster
+  - migrate-job.yaml
+  - api.yaml
+  - workers.yaml
+  - frontend.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+# Pin image tags per environment, e.g.:
+#   kustomize edit set image knowledge-base-backend=ghcr.io/acme/kb-backend:v1.2.3
+images:
+  - name: knowledge-base-backend
+    newTag: latest
+  - name: knowledge-base-frontend
+    newTag: latest
+
+labels:
+  - includeSelectors: false
+    pairs:
+      app.kubernetes.io/part-of: knowledge-base

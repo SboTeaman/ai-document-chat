@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kb-migrate
+  namespace: knowledge-base
+  # Run DB migrations + collectstatic before/with a rollout. Bump the name
+  # (or use a Helm hook / argocd PreSync) on each release to re-run.
+  labels: { app.kubernetes.io/name: kb-migrate }
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: kb-migrate }
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: knowledge-base-backend:latest
+          command:
+            ["sh", "-c", "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+          envFrom:
+            - configMapRef: { name: kb-config }
+            - secretRef: { name: kb-secrets }
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }

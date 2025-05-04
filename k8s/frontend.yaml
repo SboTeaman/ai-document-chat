@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kb-frontend
+  namespace: knowledge-base
+  labels: { app.kubernetes.io/name: kb-frontend }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app.kubernetes.io/name: kb-frontend }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: kb-frontend }
+    spec:
+      containers:
+        - name: frontend
+          image: knowledge-base-frontend:latest
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet: { path: /, port: 80 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "200m", memory: "128Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kb-frontend
+  namespace: knowledge-base
+spec:
+  selector: { app.kubernetes.io/name: kb-frontend }
+  ports:
+    - { name: http, port: 80, targetPort: 80 }

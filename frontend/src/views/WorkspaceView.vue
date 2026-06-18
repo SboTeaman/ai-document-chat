@@ -204,7 +204,7 @@ const uploadingCount = ref(0);
 const isDragging = ref(false);
 const sidebarOpen = ref(false);
 const uploadCollectionId = ref<number | null>(null);
-const confirmModal = ref({ show: false, message: "", onConfirm: () => {} as () => void });
+const confirmModal = ref<{ show: boolean; message: string; onConfirm: () => void }>({ show: false, message: "", onConfirm: () => {} });
 
 const canManage = computed(() => ["owner", "admin"].includes(selected.value?.my_role));
 const filteredDocs = computed(() =>

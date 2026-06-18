@@ -145,7 +145,7 @@ const messagesEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLTextAreaElement | null>(null);
 let abortCtrl: AbortController | null = null;
 
-const confirmModal = ref({ show: false, message: "", onConfirm: () => {} as () => void });
+const confirmModal = ref<{ show: boolean; message: string; onConfirm: () => void }>({ show: false, message: "", onConfirm: () => {} });
 const citationModal = ref<any | null>(null);
 
 function askConfirm(message: string, onConfirm: () => void) {

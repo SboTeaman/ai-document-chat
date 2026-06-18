@@ -7,7 +7,6 @@ from django.conf import settings
 from apps.search.services import SearchResult, hybrid_search
 from common.ollama import get_ollama_client
 
-
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """You are a helpful knowledge base assistant. Answer questions based ONLY on the provided context documents.

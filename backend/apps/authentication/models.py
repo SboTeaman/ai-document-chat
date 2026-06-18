@@ -7,7 +7,7 @@ from django.http import HttpRequest
 
 
 class UserManager(BaseUserManager):
-    def create_user(self, email: str, password: str | None = None, **extra_fields) -> "User":
+    def create_user(self, email: str, password: str | None = None, **extra_fields) -> User:
         """Create and persist a regular user, normalising and requiring the email."""
         if not email:
             raise ValueError("Email is required")
@@ -17,7 +17,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email: str, password: str | None = None, **extra_fields) -> "User":
+    def create_superuser(self, email: str, password: str | None = None, **extra_fields) -> User:
         """Create a user with staff + superuser flags set."""
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
@@ -76,7 +76,7 @@ class AuditLog(models.Model):
 def create_audit_log(
     *,
     workspace_id: int,
-    user: "User | None",
+    user: User | None,
     action: str,
     resource_type: str,
     resource_id: int | None = None,

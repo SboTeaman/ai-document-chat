@@ -1,5 +1,6 @@
-from .base import *  # noqa: F401, F403
 from decouple import config
+
+from .base import *  # noqa: F401, F403
 
 DEBUG = True
 # Set CELERY_TASK_ALWAYS_EAGER=True in .env (or docker-compose.lite.yml) to run

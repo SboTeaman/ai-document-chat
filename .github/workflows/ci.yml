@@ -52,6 +52,10 @@ jobs:
       DJANGO_SETTINGS_MODULE: config.settings.test
       DJANGO_SECRET_KEY: ci-secret-key-not-for-production
       DATABASE_URL: postgresql://kb_user:kb_password@localhost:5432/knowledgebase_test
+      TEST_DB_HOST: localhost
+      TEST_DB_NAME: knowledgebase_test
+      TEST_DB_USER: kb_user
+      TEST_DB_PASSWORD: kb_password
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/0
       CELERY_RESULT_BACKEND: redis://localhost:6379/1
